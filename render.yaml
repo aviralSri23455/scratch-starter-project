@@ -3,11 +3,13 @@ services:
     name: scratch-starter-project
     env: static
     buildCommand: npm run build
-    staticPublishPath: ./dist
+    staticPublishPath: dist
     routes:
       - type: rewrite
-        source: /*
+        source: /.*
         destination: /index.html
+      - type: static
+        source: /
     envVars:
       - key: NODE_VERSION
         value: 16.x
