@@ -1,8 +1,8 @@
 {
   "version": 2,
   "routes": [
-    { "src": "/app.js", "dest": "/app.js" },
-    { "src": "/app.css", "dest": "/app.css" },
+    { "src": "/app.js", "dest": "/public/app.js" },
+    { "src": "/app.css", "dest": "/public/app.css" },
     { "src": "/(.*)\\.(ico|png|jpg|svg|mp3|json)", "dest": "/public/$1.$2" },
     { "src": "/(.*)", "dest": "/public/index.html" }
   ],
