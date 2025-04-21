@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 
+// Self-referential component for nested animations
 const AnimationBlock = ({ animation, index, updateAnimation, removeAnimation, activeSprite, ANIMATION_TYPES }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState({ ...animation });
@@ -104,10 +105,33 @@ const AnimationBlock = ({ animation, index, updateAnimation, removeAnimation, ac
           </div>
         )}
       </div>
-      {/* Placeholder for nested blocks in Repeat */}
+      {/* Render nested blocks in Repeat */}
       {animation.type === ANIMATION_TYPES.REPEAT && (
         <div className="ml-4 mt-1 border-l-2 border-yellow-300 pl-2">
-          <span className="text-xs italic text-yellow-200">Nested blocks go here</span>
+          {animation.animations && animation.animations.length > 0 ? (
+            animation.animations.map((nestedAnim, nestedIndex) => (
+              <div key={nestedIndex} className="my-1">
+                <AnimationBlock
+                  animation={nestedAnim}
+                  index={nestedIndex}
+                  updateAnimation={(spriteId, idx, updatedAnim) => {
+                    const newAnimations = [...animation.animations];
+                    newAnimations[idx] = updatedAnim;
+                    updateAnimation(activeSprite, index, { ...animation, animations: newAnimations });
+                  }}
+                  removeAnimation={(spriteId, idx) => {
+                    const newAnimations = [...animation.animations];
+                    newAnimations.splice(idx, 1);
+                    updateAnimation(activeSprite, index, { ...animation, animations: newAnimations });
+                  }}
+                  activeSprite={activeSprite}
+                  ANIMATION_TYPES={ANIMATION_TYPES}
+                />
+              </div>
+            ))
+          ) : (
+            <span className="text-xs italic text-yellow-200">No nested blocks</span>
+          )}
         </div>
       )}
     </div>

@@ -2,10 +2,16 @@ import React, { useRef, useEffect, useState } from "react";
 import { useSprite } from "../context/SpriteContext";
 import CatSprite from "./CatSprite";
 
+// Define stage dimensions
+const STAGE_WIDTH = 480;
+const STAGE_HEIGHT = 360;
+const SPRITE_HEIGHT = 80; // Approximate height, should match SpriteContext
+
 export default function PreviewArea() {
   const { sprites, updateSpritePosition } = useSprite(); // Add updateSpritePosition
   const [collisionMessage, setCollisionMessage] = useState("");
   const prevSpritesRef = useRef([]);
+  const stageRef = useRef(null);
 
   useEffect(() => {
     // Detect animation swap by comparing animations between frames
@@ -50,56 +56,68 @@ export default function PreviewArea() {
     const stageRect = e.currentTarget.getBoundingClientRect();
     // Calculate drop position relative to the stage center (0,0)
     const x = e.clientX - stageRect.left - stageRect.width / 2;
-    const y = -(e.clientY - stageRect.top - stageRect.height / 2); // Invert Y-axis
+    
+    // Invert Y-axis to match Scratch coordinate system (positive Y is up)
+    let y = -(e.clientY - stageRect.top - stageRect.height / 2);
 
-    updateSpritePosition(spriteId, x, y);
+    // Apply boundary checking for x coordinate
+    const SPRITE_WIDTH = 80; // Should match the value in SpriteContext
+    const boundedX = Math.max(-(STAGE_WIDTH/2) + SPRITE_WIDTH/2, Math.min(x, (STAGE_WIDTH/2) - SPRITE_WIDTH/2));
+
+    // Apply boundary checking for y coordinate
+    const boundedY = Math.max(-(STAGE_HEIGHT/2) + SPRITE_HEIGHT/2, Math.min(y, (STAGE_HEIGHT/2) - SPRITE_HEIGHT/2));
+
+    updateSpritePosition(spriteId, boundedX, boundedY);
   };
 
   return (
-    <div
-      className="relative w-full h-full flex items-center justify-center"
-      style={{ minHeight: 360, minWidth: 480, background: "#fff" }}
-    >
-      <div
-        className="relative"
-        style={{ width: 480, height: 360, background: "#fff", border: "2px solid #bbb", borderRadius: 12, overflow: "hidden" }}
-        onDragOver={handleDragOver} // Add drag over handler to the stage
-        onDrop={handleDrop} // Add drop handler to the stage
+    <div className="flex-none h-full w-full overflow-hidden p-2">
+      <div 
+        ref={stageRef}
+        className="w-full h-full bg-white rounded-lg flex items-center justify-center relative"
+        style={{
+          width: `${STAGE_WIDTH}px`,
+          height: `${STAGE_HEIGHT}px`,
+          margin: '0 auto',
+          border: '2px solid #ddd',
+          overflow: 'hidden'
+        }}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
-        {collisionMessage && (
-          <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-black px-4 py-2 rounded shadow-lg z-50 animate-pulse">
-            {collisionMessage}
-          </div>
-        )}
+        {/* Stage center coordinates indicator */}
+        <div className="absolute" style={{ left: STAGE_WIDTH/2, top: STAGE_HEIGHT/2, width: 2, height: 2, backgroundColor: '#ccc' }}></div>
+        
         {sprites.map((sprite) => (
           <div
             key={sprite.id}
-            draggable // Make the sprite draggable
-            onDragStart={(e) => handleDragStart(e, sprite.id)} // Add drag start handler
-            className="absolute transition-transform duration-100 ease-linear cursor-grab" // Add cursor style
+            className="absolute"
             style={{
-              left: `calc(50% + ${sprite.x}px)` ,
-              top: `calc(50% + ${-sprite.y}px)` ,
-              transform: `translate(-50%, -50%) rotate(${sprite.direction - 90}deg)` ,
-              transformOrigin: 'center center'
+              transform: `translate(${sprite.x + STAGE_WIDTH / 2 - 50}px, ${-sprite.y + STAGE_HEIGHT / 2 - 200}px) rotate(${90 - sprite.direction}deg)`,
+              transition: 'transform 0.5s ease',
+              zIndex: sprite.saying || sprite.thinking ? 10 : 1
             }}
+            draggable
+            onDragStart={(e) => handleDragStart(e, sprite.id)}
           >
-            <div style={{ transform: 'scale(0.85)', transformOrigin: 'center center' }}> {/* Adjusted scale for Scratch-like size */}
-              <CatSprite />
-            </div>
+            <CatSprite />
             {sprite.saying && (
-              <div className="absolute bottom-full mb-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-sm rounded py-2 px-3 whitespace-nowrap shadow-lg z-10 pointer-events-none"> {/* Added pointer-events-none */}
+              <div className="absolute top-0 left-full ml-2 bg-white border border-gray-300 rounded-lg p-2 text-sm z-20 whitespace-nowrap">
                 {sprite.saying}
-                <div className="absolute left-1/2 transform -translate-x-1/2 -bottom-1 w-0 h-0 border-l-5 border-l-transparent border-r-5 border-r-transparent border-t-5 border-t-blue-600"></div>
               </div>
             )}
             {sprite.thinking && (
-              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-300 text-black text-xs rounded-full py-1 px-3 shadow pointer-events-none"> {/* Added pointer-events-none */}
-                {sprite.thinking}
+              <div className="absolute top-0 left-full ml-2 bg-white border border-gray-300 rounded-lg p-2 text-sm z-20 whitespace-nowrap">
+                <span className="font-bold">🤔</span> {sprite.thinking}
               </div>
             )}
           </div>
         ))}
+        {collisionMessage && (
+          <div className="absolute top-2 left-2 bg-yellow-100 border border-yellow-300 text-yellow-800 px-4 py-2 rounded-md z-30">
+            {collisionMessage}
+          </div>
+        )}
       </div>
     </div>
   );

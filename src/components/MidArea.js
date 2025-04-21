@@ -57,7 +57,10 @@ export default function MidArea() {
           break;
         case ANIMATION_TYPES.REPEAT:
           animationData.count = 10; // Default value
-          animationData.animations = []; // Placeholder for nested
+          // Add a default move animation inside the repeat block
+          animationData.animations = [
+            { type: ANIMATION_TYPES.MOVE, value: 10 }
+          ]; // Default nested animation
           break;
         default:
           break;

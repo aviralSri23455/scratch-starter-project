@@ -5,31 +5,7 @@ const SpriteContext = createContext();
 export const useSprite = () => useContext(SpriteContext);
 
 export const SpriteProvider = ({ children }) => {
-  const [sprites, setSprites] = useState([
-    {
-      id: 1,
-      name: 'Cat',
-      component: 'CatSprite',
-      x: 0,
-      y: 0,
-      direction: 90, // degrees (90 is pointing right)
-      animations: [],
-      currentAnimationIndex: 0, // Track animation progress
-      saying: '',
-      thinking: '',
-      sayingTimer: null,
-      thinkingTimer: null,
-      // Add state for repeat loops
-      repeatCounters: {}, // { animationIndex: countRemaining }
-    },
-  ]);
-
-  const [activeSprite, setActiveSprite] = useState(1);
-  const [isPlaying, setIsPlaying] = useState(false);
-  // Use an object to store interval IDs for each sprite
-  const intervalIdsRef = React.useRef({});
-
-  // Animation types
+  // Animation types - moved to the top to fix reference error
   const ANIMATION_TYPES = {
     MOVE: 'move',
     TURN: 'turn',
@@ -38,6 +14,55 @@ export const SpriteProvider = ({ children }) => {
     SAY: 'say',
     THINK: 'think',
   };
+
+  // Default animation data for repeat blocks
+  const DEFAULT_REPEAT_ANIMATIONS = [
+    { type: 'MOVE', value: 10 }
+  ];
+  
+  const [sprites, setSprites] = useState([
+    {
+      id: 1,
+      name: 'Cat 1',
+      component: 'CatSprite',
+      x: -200, // Position on the left side
+      y: 0, // Center vertically
+      direction: 90,
+     // degrees (90 is pointing right)
+      animations: [
+        { type: ANIMATION_TYPES.MOVE, value: 10 } // Move right
+      ],
+      currentAnimationIndex: 0, // Track animation progress
+      saying: '',
+      thinking: '',
+      sayingTimer: null,
+      thinkingTimer: null,
+      // Add state for repeat loops
+      repeatCounters: {}, // { animationIndex: countRemaining }
+    },
+    {
+      id: 2,
+      name: 'Cat 2',
+      component: 'CatSprite',
+      x: -200, // Position on the left side
+      y: 0, // Center vertically
+      direction: 90, // degrees (90 is pointing right)
+      animations: [
+        { type: ANIMATION_TYPES.MOVE, value: -10 } // Move left
+      ],
+      currentAnimationIndex: 0,
+      saying: '',
+      thinking: '',
+      sayingTimer: null,
+      thinkingTimer: null,
+      repeatCounters: {},
+    },
+  ]);
+
+  const [activeSprite, setActiveSprite] = useState(1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  // Use an object to store interval IDs for each sprite
+  const intervalIdsRef = React.useRef({});
 
   // Add a new sprite
   const addSprite = () => {
@@ -49,7 +74,7 @@ export const SpriteProvider = ({ children }) => {
         name: `Sprite ${newId}`,
         component: 'CatSprite',
         x: 0,
-        y: 0,
+        y: 100, // Position higher on stage
         direction: 90,
         animations: [],
         currentAnimationIndex: 0, // Track animation progress
@@ -57,6 +82,7 @@ export const SpriteProvider = ({ children }) => {
         thinking: '',
         sayingTimer: null,
         thinkingTimer: null,
+        repeatCounters: {}, // Initialize repeat counters for consistency
       },
     ]);
     setActiveSprite(newId);
@@ -107,14 +133,31 @@ export const SpriteProvider = ({ children }) => {
     }));
   };
 
+  // Stage boundaries for collision detection
+  const STAGE_WIDTH = 480;
+  const STAGE_HEIGHT = 360;
+  const SPRITE_WIDTH = 80; // Approximate width of the cat sprite
+  const SPRITE_HEIGHT = 80; // Approximate height, should match PreviewArea
+  
   const executeAnimation = (sprite, animation) => {
     const { type, value, duration, x, y } = animation;
     switch (type) {
       case ANIMATION_TYPES.MOVE:
+        // Move horizontally (left and right)
+        const newX = sprite.x + value;
+        
+        // Boundary checking to keep sprite within stage
+        const boundedX = Math.max(-(STAGE_WIDTH/2) + SPRITE_WIDTH/2, Math.min(newX, (STAGE_WIDTH/2) - SPRITE_WIDTH/2));
+        
+        // Ensure sprite stays in the upper part of the stage for visibility
+        // Set a minimum y value to keep the sprite visible
+        const minY = 0; // Keep at or above the center line
+        
         return {
           ...sprite,
-          x: sprite.x + value * Math.cos(sprite.direction * Math.PI / 180),
-          y: sprite.y + value * Math.sin(sprite.direction * Math.PI / 180),
+          x: boundedX,
+          // Ensure y position is at least minY
+          y: Math.max(sprite.y, minY),
         };
       case ANIMATION_TYPES.TURN:
         return {
@@ -122,10 +165,16 @@ export const SpriteProvider = ({ children }) => {
           direction: (sprite.direction + value) % 360,
         };
       case ANIMATION_TYPES.GOTO:
+        // Apply boundary checking for x coordinate
+        const boundedGotoX = Math.max(-(STAGE_WIDTH/2) + SPRITE_WIDTH/2, Math.min(x, (STAGE_WIDTH/2) - SPRITE_WIDTH/2));
+        
+        // Apply boundary checking for y coordinate
+        const boundedGotoY = Math.max(-(STAGE_HEIGHT/2) + SPRITE_HEIGHT/2, Math.min(y, (STAGE_HEIGHT/2) - SPRITE_HEIGHT/2));
+
         return {
           ...sprite,
-          x: x,
-          y: y,
+          x: boundedGotoX,
+          y: boundedGotoY,
         };
       case ANIMATION_TYPES.SAY:
         if (sprite.sayingTimer) {
